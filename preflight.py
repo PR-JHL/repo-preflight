@@ -560,7 +560,20 @@ def selftest() -> int:
 
 
 # ---------------------------------------------------------------- CLI
+def _console_safe() -> None:
+    """Windows 控制台默认 GBK：编码不了的字符直接替换，别让体检自己崩掉。
+
+    `--selftest` 会打印 ✓/✗，在 GBK 控制台上 strict 编码会抛 UnicodeEncodeError。
+    """
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except (AttributeError, ValueError):  # 不是 TextIOWrapper（比如测试里重定向到 StringIO）
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _console_safe()
     ap = argparse.ArgumentParser(description="发布前体检：音频/密钥/本机路径检查")
     ap.add_argument("target", nargs="?", help="要检查的目录")
     ap.add_argument("--allow-audio", action="append", default=[],
@@ -569,7 +582,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--json", help="结果写成 JSON")
     ap.add_argument("--selftest", action="store_true", help="跑自带用例")
     ap.add_argument("--quiet", action="store_true", help="只在有阻断时输出")
-    ap.add_argument("--version", action="version", version="repo-preflight 0.2")
+    ap.add_argument("--version", action="version", version="repo-preflight 0.2.1")
     args = ap.parse_args(argv)
 
     if args.selftest:

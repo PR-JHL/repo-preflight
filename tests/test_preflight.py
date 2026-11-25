@@ -14,6 +14,8 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -227,6 +229,17 @@ class TestCli(unittest.TestCase):
         code, out = self.run_main(["--selftest"])
         self.assertEqual(code, 0, out)
         self.assertIn("结果: 通过", out)
+
+
+class TestConsoleEncoding(unittest.TestCase):
+    def test_selftest_survives_non_utf8_console(self):
+        """Windows 控制台默认 GBK，打印 ✓ 不能把体检自己搞崩（真出过一次）。"""
+        env = dict(os.environ, PYTHONIOENCODING="gbk")
+        p = subprocess.run([sys.executable, str(ROOT / "preflight.py"), "--selftest"],
+                           capture_output=True, env=env, cwd=str(ROOT))
+        self.assertEqual(p.returncode, 0,
+                         p.stderr.decode("gbk", "replace")[-400:] +
+                         p.stderr.decode("utf-8", "replace")[-400:])
 
 
 if __name__ == "__main__":
